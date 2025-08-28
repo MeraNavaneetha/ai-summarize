@@ -1,23 +1,19 @@
 import streamlit as st
 from transformers import pipeline
-import pytesseract 
-from PIL import Image
 from youtube_transcript_api import YouTubeTranscriptApi
 from urllib.parse import urlparse, parse_qs
+from PIL import Image
 
 # Initialize summarizer
 summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
 
-# Set up Tesseract OCR path (update if installed elsewhere)
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-
 # App title
 st.set_page_config(page_title="Smart Notes", layout="centered")
 st.title("🧠 SMART NOTES")
-st.write("Summarize text, YouTube videos, or extract notes from images.")
+st.write("Summarize text or YouTube videos. (Image OCR works only in local setup)")
 
 # Input options
-option = st.radio("Select Input Type:", ["Text", "YouTube Link", "Image"])
+option = st.radio("Select Input Type:", ["Text", "YouTube Link", "Image (local only)"])
 
 # Summarize text
 def summarize_text(text):
@@ -25,11 +21,6 @@ def summarize_text(text):
         st.warning("Please enter at least 30 words for better summarization.")
         return None
     return summarizer(text, max_length=150, min_length=40, do_sample=False)[0]['summary_text']
-
-# Extract text from image
-def extract_text_from_image(uploaded_file):
-    image = Image.open(uploaded_file)
-    return pytesseract.image_to_string(image)
 
 # Extract video ID
 def extract_video_id(url):
@@ -76,14 +67,12 @@ elif option == "YouTube Link":
         with st.spinner("Fetching and summarizing transcript..."):
             summary = summarize_youtube_link(link)
 
-elif option == "Image":
-    uploaded_file = st.file_uploader("Upload an image with text", type=["png", "jpg", "jpeg"])
+elif option == "Image (local only)":
+    uploaded_file = st.file_uploader("Upload an image (OCR works locally only)", type=["png", "jpg", "jpeg"])
     if uploaded_file is not None:
-        with st.spinner("Extracting text from image..."):
-            extracted_text = extract_text_from_image(uploaded_file)
-            st.subheader("Extracted Text:")
-            st.write(extracted_text)
-            summary = summarize_text(extracted_text)
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded Image", use_column_width=True)
+        st.info("⚠ OCR is disabled on Streamlit Cloud. Run locally to extract text.")
 
 # Display summary
 if summary:
